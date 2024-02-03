@@ -34,7 +34,7 @@ router.get("/oauth/verify", (req, res, next) => {
       console.log(err);
     }
 
-    console.log(tokenInfo);
+    // console.log(tokenInfo);
   
     // var tokenStore = new TokenStore();
     // tokenStore.write(tokenInfo, function(storeErr) {
@@ -68,50 +68,59 @@ router.get("/oauth/verify", (req, res, next) => {
               name: 'Example User',
               login: 'user@example.com' }
           */
-        console.log(user.login);
+        // console.log(user.login);
 
         client.files
-          .getDownloadURL('1419044464455')
-          .then((docURL) => {
-
-              const state = {
-                boxFileId: req.query.boxFileId,
-                boxUserId: req.query.boxUserId,
-                boxFileExtension: req.query.boxFileExtension,
-                docURL: docURL,
-                token: tokenInfo
-              };
-
-              const encodedState = btoa(JSON.stringify(state));
-              const url = 'http://localhost:4200/box-integration?boxIntegration=true';
-              return res.status(304)
-                .redirect(`${url}&username=${user.login}&state=${encodedState}`);
-
-            // const instanceUrl = 'https://jbyc4yhg6fhlctxrmyxzxy4ahy0mboff.lambda-url.ap-south-1.on.aws/msb3-api-uat/instanceurl'
-            // Make request
-            // axios.get(instanceUrl, {
-            //   headers: {
-            //     'username': user.login
-            //   }
-            // }).then((apiRes) => {
-            //   console.log(apiRes.data)
-        
-            //   const state = {
-            //     username: user.login,
-            //     userInstanceDetails: apiRes.data,
-            //     boxFileId: req.query.boxFileId,
-            //     boxUserId: req.query.boxUserId,
-            //     boxFileExtension: req.query.boxFileExtension,
-            //     docURL: docURL,
-            //     token: tokenInfo
-            //   }
-            //   const encodedState = btoa(JSON.stringify(state));
-            // return res.status(304).redirect(`http://localhost:4200/box-integration?boxIntegration=true&state=${encodedState}`);
-            // }).catch((err) => {
-            //   console.log(err)
-            //   return res.status(304).redirect(`http://localhost:4200/login?boxIntegration=true&error=true`);
-            // });
+          .getMetadata(req.query.boxFileId)
+          .then((metaData) => {
+            console.log('FILE META', metaData)
+            client.files
+              .getDownloadURL(req.query.boxFileId)
+              .then((docURL) => {
+    
+                  const state = {
+                    boxFileId: req.query.boxFileId,
+                    boxUserId: req.query.boxUserId,
+                    boxFileExtension: req.query.boxFileExtension,
+                    docURL: docURL,
+                    token: tokenInfo
+                  };
+    
+                  const encodedState = btoa(JSON.stringify(state));
+                  const url = 'http://localhost:4200/box-integration?boxIntegration=true';
+                  return res.status(304)
+                    .redirect(`${url}&username=${user.login}&state=${encodedState}`);
+    
+                // const instanceUrl = 'https://jbyc4yhg6fhlctxrmyxzxy4ahy0mboff.lambda-url.ap-south-1.on.aws/msb3-api-uat/instanceurl'
+                // Make request
+                // axios.get(instanceUrl, {
+                //   headers: {
+                //     'username': user.login
+                //   }
+                // }).then((apiRes) => {
+                //   console.log(apiRes.data)
+            
+                //   const state = {
+                //     username: user.login,
+                //     userInstanceDetails: apiRes.data,
+                //     boxFileId: req.query.boxFileId,
+                //     boxUserId: req.query.boxUserId,
+                //     boxFileExtension: req.query.boxFileExtension,
+                //     docURL: docURL,
+                //     token: tokenInfo
+                //   }
+                //   const encodedState = btoa(JSON.stringify(state));
+                // return res.status(304).redirect(`http://localhost:4200/box-integration?boxIntegration=true&state=${encodedState}`);
+                // }).catch((err) => {
+                //   console.log(err)
+                //   return res.status(304).redirect(`http://localhost:4200/login?boxIntegration=true&error=true`);
+                // });
+              })
           })
+          .catch((error) => {
+            console.error('ERROR FILE META', error)
+          })
+
 
 
 
@@ -173,11 +182,45 @@ router.get("/integration/oauth", (req, res, next) => {
 
 router.get("/integration/box/upload", (req, res, next) => {
 
-  console.log(req.body);
+  console.log(req.query);
+  const {
+    app_url,
+    state,
+    userTenantId
+  } = req.query;
+  const {
+    boxFileId,
+    boxUserId,
+    boxFileExtension,
+    docURL,
+    token
+  } = JSON.parse(atob(state));
 
-  // const [ encodedBoxState, app_url ] = req.query.state.split('?app_url=');
-  // const auth_code = req.query.code;
-  // const decodedState = JSON.parse(atob(encodedBoxState));
+  const payload = {
+    externalSysUserInfo: {
+      userExternalSystemId: boxUserId
+    },
+    externalSystemName: 'OneDrive',
+    skyDriveFileInfoList: [{
+      skyDriveFileID: boxFileId,
+      skyDriveFileName: 'uploadedFromBox',
+      skyDriveFileDownloadUri: docURL,
+      skyDriveFileParentReference: '/'
+    }]
+  };
+
+
+  // /skydrivefiles
+
+  const url = app_url + '/msbapi/v1/skydrivefiles'
+
+  // axios.post(url, { skyDriveData: payload})
+  //       .then((resp) => {
+  //         console.log('UPLOAD RESPONSE',resp);
+  //       })
+  //       .catch((error) => {
+  //         console.log('UPLOAD ERROR',error);
+  //       })
 
 
 
